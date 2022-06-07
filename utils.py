@@ -19,7 +19,7 @@ def density_ring(z):
 def train(model, iterations=2001, 
           lr=0.001, 
           scheduler=None, 
-          device=None):
+          device=torch.device('cpu')):
     
     pz = dist.MultivariateNormal(torch.zeros(2), torch.eye(2))
     # Setup for Plots
@@ -35,7 +35,6 @@ def train(model, iterations=2001,
     loss_list = []
     jac_list = []
 
-    device = torch.device('cuda:3')
     model.to(device)
     # Main training loop
     optimizer = optim.Adam(model.parameters(), lr=lr)
