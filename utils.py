@@ -94,25 +94,32 @@ def loss(density, y, log_jacobians):
     return torch.abs((-sum_of_log_jacobians - torch.log(density(y)+1e-9)).mean())
 
 def model_layerwise(model, type):
+    if type == 'freia':
+        length = len(model)
+    elif type=='simple':
+        length = len(model.flows)
+    else:
+        raise ValueError('Please use "freia" or "simple" for model type')
     model.cpu()
-    fig, ax = plt.subplots(1, len(model)+1)
-    fig.set_figheight(3)
-    fig.set_figwidth(3*len(model)+1)
+    columns = int(np.sqrt(length)) + 1
+    fig, ax = plt.subplots(columns, columns)
+    fig.set_figheight(3*columns)
+    fig.set_figwidth(4*columns)
     pz = dist.MultivariateNormal(torch.zeros(2), torch.eye(2))
     z = pz.sample((int(1e5), ))
     z = z.detach().numpy()
-    ax[0].hexbin(z[:,0], z[:,1], cmap='rainbow')
-    ax[0].set_title('Input distribution', fontsize=10)
-    for nth_flow in range(len(model)):
+    ax.flatten()[0].hexbin(z[:,0], z[:,1], cmap='rainbow')
+    ax.flatten()[0].set_title('Input distribution', fontsize=10)
+    for nth_flow in range(length):
         if type == 'freia':
             z = model[nth_flow]((torch.tensor(z),torch.tensor(z)))[0][0]
         elif type=='simple':
             z = model.flows[nth_flow](torch.tensor(z))
-        else:
-            raise ValueError('Please use "freia" or "simple" for model type')
         z = z.detach().numpy()
-        ax[nth_flow+1].hexbin(z[:,0], z[:,1], cmap='rainbow')
-        ax[nth_flow+1].set_title('Output of FrEIA layer {}'.format(nth_flow), fontsize=10)
+        ax.flatten()[nth_flow+1].hexbin(z[:,0], z[:,1], cmap='rainbow')
+        ax.flatten()[nth_flow+1].set_title('Output of layer {}'.format(nth_flow), fontsize=10)
+    for axis in ax.flatten()[length+1:]:
+        axis.set_axis_off()
 
 
 
