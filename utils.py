@@ -16,12 +16,16 @@ def density_ring(z):
     return torch.exp(-u)
 
 # Train function
-def train(model, iterations=2001, 
+def train(model, 
+          name=None,
+          iterations=2001, 
           lr=0.001, 
-          scheduler=None, 
-          device=torch.device('cpu')):
+          scheduler=None,
+          device=torch.device('cpu'),
+          jupyter_nb=False):
     
     pz = dist.MultivariateNormal(torch.zeros(2), torch.eye(2))
+    
     # Setup for Plots
     id_figure = 2
     fig = plt.figure(figsize=(16, 18))
@@ -33,28 +37,29 @@ def train(model, iterations=2001,
     plt.title('Target density', fontsize=15)
 
     loss_list = []
-    jac_list = []
 
     model.to(device)
-    # Main training loop
     optimizer = optim.Adam(model.parameters(), lr=lr)
     if scheduler is not None:
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, scheduler)
+    
+    # Start Training
     for iter in range(iterations):
         optimizer.zero_grad()
+        
         # Draw a sample batch from Normal
         z = pz.sample((512, ))
         z = z.to(device)
+        
         # Evaluate flow of transforms
         y, log_jacobians = model(z)
         loss_v = loss(density_ring, y, log_jacobians)
         loss_v.backward()
         optimizer.step()
         if scheduler is not None: scheduler.step()
-        
-        # safe loss
+        # keep loss
         loss_list.append(loss_v.cpu().detach().numpy())
-        #jac_list.append(log_jacobians.detach().numpy())
+        
         # plot results
         if (iter % int(iterations/10.) == 0):
             print('Iter. {} Loss: {:.5f}'.format(iter, loss_v.item()))
@@ -68,11 +73,19 @@ def train(model, iterations=2001,
             im = plt.hexbin(y[:,0], y[:,1], cmap='rainbow')
             plt.title('Iteration {}'.format(iter), fontsize=15)
             id_figure += 1
-    plt.show()    
+    if not jupyter_nb:
+        if name is None:
+            raise ValueError('Please set model name.')
+        plt.savefig(name + '_g_z.png')
+    else:
+        plt.show()
+    plt.clf()
+    # plot losses   
     plt.plot(loss_list)
     plt.xlabel('Iteration', fontsize=13)
     plt.ylabel('Loss', fontsize=13)
-    plt.show()
+    if not jupyter_nb:
+        plt.savefig(name + '_loss.png')
 
 def mlp_constructor(input_dim=2, out_dim=2, hidden_nodes=100):
     model = nn.Sequential(
@@ -92,13 +105,15 @@ def loss(density, y, log_jacobians):
     sum_of_log_jacobians = log_jacobians
     return torch.abs((-sum_of_log_jacobians - torch.log(density(y)+1e-9)).mean())
 
-def model_layerwise(model, type):
-    if type == 'freia':
-        length = len(model)
-    elif type=='simple':
+def model_layerwise(model, 
+                    name,
+                    jupyter_nb=False):
+    if name == 'freia':
+        length = len(model.module_list)
+    if name=='simplemodel':
         length = len(model.flows)
-    else:
-        raise ValueError('Please use "freia" or "simple" for model type')
+    #if name!='simplemodel' and name!='freia':
+    #    raise ValueError('Please use "freia" or "simplemodel" for model name')
     model.cpu()
     columns = int(np.sqrt(length)) + 1
     fig, ax = plt.subplots(columns, columns)
@@ -110,18 +125,17 @@ def model_layerwise(model, type):
     ax.flatten()[0].hexbin(z[:,0], z[:,1], cmap='rainbow')
     ax.flatten()[0].set_title('Input distribution', fontsize=10)
     for nth_flow in range(length):
-        if type == 'freia':
-            z = model[nth_flow]((torch.tensor(z),torch.tensor(z)))[0][0]
-        elif type=='simple':
+        if name == 'freia':
+            z = model.module_list[nth_flow]((torch.tensor(z),torch.tensor(z)))[0][0]
+        elif name=='simplemodel':
             z = model.flows[nth_flow](torch.tensor(z))
         z = z.detach().numpy()
         ax.flatten()[nth_flow+1].hexbin(z[:,0], z[:,1], cmap='rainbow')
         ax.flatten()[nth_flow+1].set_title('Output of layer {}'.format(nth_flow), fontsize=10)
     for axis in ax.flatten()[length+1:]:
         axis.set_axis_off()
-
-
-
+    if not jupyter_nb:
+        plt.savefig(name + '_layerwise.png')
 
 
 

@@ -5,10 +5,13 @@ import torch.distributions as dist
 
 from utils import *
 
-# Flow class
-''' Note: PlanarFlows are only invertible under certain conditions, 
-nevetheless we use them to illustrate the workflow of a simple model '''
+'''
+Simple code example with planar flows.
+Note: PlanarFlows are only invertible under certain conditions, 
+nevetheless we use them to illustrate the workflow of a simple model. 
+'''
 
+# create a class for planar flows
 class PlanarFlow(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -35,7 +38,7 @@ class PlanarFlow(nn.Module):
         for param in self.parameters():
             param.data.uniform_(-0.01, 0.01)
 
-# Main Model to wrap flows
+# define main model to wrap flows
 
 class NormalizingFlow(nn.Module):
     def __init__(self, dim, n_flows):
@@ -56,16 +59,17 @@ class NormalizingFlow(nn.Module):
 # Initialize and train the NormalizingFlow model
 flow = NormalizingFlow(dim=2, n_flows=2)
 train(model=flow,
+      name='simplemodel',
       iterations=1801, 
       lr=0.001)
 
 # Check the output of the stacked flow components
-model_layerwise(flow, type='simple')
+model_layerwise(flow, name='simplemodel')
 
 
-######################
-# Freia Model
-######################
+'''
+Now we are using more complex flows. To do so we use the FrEIA framework.
+'''
 
 # use https://github.com/VLL-HD/FrEIA from Visual Learning Lab Heidelberg
 import FrEIA.framework as Ff
@@ -73,23 +77,24 @@ import FrEIA.modules as Fm
 
 # Initialize FrEIA model and append some modules to it
 inn = Ff.SequenceINN(2)
-for k in range(8):
+for k in range(2):
     inn.append(Fm.NICECouplingBlock, subnet_constructor=mlp_constructor)
     inn.append(Fm.PermuteRandom)
 
 # train FrEIA model
 train(model=inn,
+      name='freia',
       iterations=2001, 
       lr=0.001,
       scheduler=0.999)
 
 # Check the output of the stacked flow components
-model_layerwise(inn, type='freia')
+model_layerwise(inn, name='freia')
 
 # Check for bijectivity
 
 pz = dist.MultivariateNormal(torch.zeros(2), torch.eye(2))
-z = pz.sample((int(10), ))
+z = pz.sample((10, ))
 
 inn.cpu()
 y, _ = inn(z)
@@ -97,5 +102,4 @@ z_rev, _ = inn(y, rev=True)
 
 # inverting from the outputs should give the original inputs again
 assert torch.max(torch.abs(z_rev - z)) < 1e-5
-
 
