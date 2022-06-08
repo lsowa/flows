@@ -6,10 +6,13 @@ import torch.distributions as dist
 from utils import *
 
 '''
-Simple code example with planar flows.
-Note: PlanarFlows are only invertible under certain conditions, 
-nevetheless we use them to illustrate the workflow of a simple model. 
+In this example we will first have a look at the workflow of a (very) simple normalizing planar flow model. 
+Afterwards we will use the FrEIa framework to easily initialize a more complex normalizing coupling flow model.
 '''
+
+
+# Note: PlanarFlows are only invertible under certain conditions, 
+# nevetheless we use them to illustrate the workflow of a simple model. 
 
 # create a class for planar flows
 class PlanarFlow(nn.Module):
@@ -75,7 +78,22 @@ Now we are using more complex flows. To do so we use the FrEIA framework.
 import FrEIA.framework as Ff
 import FrEIA.modules as Fm
 
+# constructor for a multilayer perceptron to be used as mapping ('s' or 't')
+def mlp_constructor(input_dim=2, out_dim=2, hidden_nodes=100):
+    model = nn.Sequential(
+        nn.Linear(input_dim, hidden_nodes),
+        nn.ReLU(),
+        nn.Linear(hidden_nodes, hidden_nodes),
+        nn.ReLU(),
+        nn.Linear(hidden_nodes, hidden_nodes),
+        nn.ReLU(),
+        nn.Linear(hidden_nodes, out_dim)
+        )
+    return model
+
 # Initialize FrEIA model and append some modules to it
+# have a look at the documentation of the layers:
+#   https://vll-hd.github.io/FrEIA/_build/html/FrEIA.modules.html
 inn = Ff.SequenceINN(2)
 for k in range(2):
     inn.append(Fm.NICECouplingBlock, subnet_constructor=mlp_constructor)
