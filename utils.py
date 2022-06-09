@@ -107,7 +107,7 @@ def loss(density, y, log_jacobians):
 
 def model_layerwise(model, 
                     name,
-                    jupyter_nb=False):
+                    jupyter_nb=True):
     if name == 'freia':
         length = len(model.module_list)
     if name=='simplemodel':
