@@ -22,7 +22,7 @@ def train(model,
           lr=0.001, 
           scheduler=None,
           device=torch.device('cpu'),
-          jupyter_nb=False):
+          jupyter_nb=True):
     
     pz = dist.MultivariateNormal(torch.zeros(2), torch.eye(2))
     
@@ -44,7 +44,7 @@ def train(model,
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, scheduler)
     
     # Start Training
-    for iter in range(iterations):
+    for i in range(iterations):
         optimizer.zero_grad()
         
         # Draw a sample batch from Normal
@@ -61,8 +61,8 @@ def train(model,
         loss_list.append(loss_v.cpu().detach().numpy())
         
         # plot results
-        if (iter % int(iterations/10.) == 0):
-            print('Iter. {} Loss: {:.5f}'.format(iter, loss_v.item()))
+        if (i % int(iterations/10.) == 0):
+            print('Iter. {} Loss: {:.5f}'.format(i, loss_v.item()))
             # Draw random samples
             z = pz.sample((int(1e5), ))
             z = z.to(device)
@@ -71,7 +71,7 @@ def train(model,
             y = y.cpu().detach().numpy()
             plt.subplot(3,4,id_figure)
             im = plt.hexbin(y[:,0], y[:,1], cmap='rainbow')
-            plt.title('Iteration {}'.format(iter), fontsize=15)
+            plt.title('Iteration {}'.format(i), fontsize=15)
             id_figure += 1
     if not jupyter_nb:
         if name is None:
