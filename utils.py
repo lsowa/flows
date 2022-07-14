@@ -101,9 +101,9 @@ def mlp_constructor(input_dim=2, out_dim=2, hidden_nodes=100):
 
 def loss(density, y, log_jacobians):
     if type(log_jacobians)==list:
-        log_jacobians = sum(log_jacobians)
-    sum_of_log_jacobians = log_jacobians
-    return torch.abs((-sum_of_log_jacobians - torch.log(density(y)+1e-9)).mean())
+        log_jacobians = torch.stack(log_jacobians).mean()
+    mean_of_log_jacobians = log_jacobians.mean()
+    return -mean_of_log_jacobians - torch.log(density(y)+1e-9).mean()
 
 def model_layerwise(model, 
                     name,
